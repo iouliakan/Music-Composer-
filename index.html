@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Composer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="composer">
+        <h1>Music Composer</h1>
+        <div id="instruments">
+            <h2>Select Instrument:</h2>
+            <button class="instrument" data-type="sine">Sine Wave</button>
+            <button class="instrument" data-type="square">Square Wave</button>
+            <button class="instrument" data-type="triangle">Triangle Wave</button>
+            <button class="instrument" data-type="sawtooth">Sawtooth Wave</button>
+            <button class="instrument" data-type="acoustic_grand_piano">Acoustic Grand Piano</button>
+            <button class="instrument" data-type="electric_guitar">Electric Guitar</button>
+            <button class="instrument" data-type="violin">Violin</button>
+            <button class="instrument" data-type="trumpet">Trumpet</button>
+        </div>
+        <div id="effects">
+            <h2>Effects</h2>
+            <button class="effect" id="reverb">Reverb</button>
+            <button class="effect" id="delay">Delay</button>
+            <button class="effect" id="distortion">Distortion</button>
+            <button class="effect" id="chorus">Chorus</button>
+        </div>
+        <div id="composition">
+            <h2>Composition</h2>
+            <div id="keyboard">
+                <!-- Buttons for notes will go here -->
+            </div>
+            <button id="save">Save Composition</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+
+
