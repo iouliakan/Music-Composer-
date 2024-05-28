@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const effectButtons = document.querySelectorAll('.effect');
     const saveButton = document.getElementById('save');
 
-    const notes = [
+    // Define the notes for oscillator instruments
+    const oscillatorNotes = [
         { note: 'C3', frequency: 130.81, key: 'z' },
         { note: 'D3', frequency: 146.83, key: 'x' },
         { note: 'E3', frequency: 164.81, key: 'c' },
@@ -30,6 +31,39 @@ document.addEventListener('DOMContentLoaded', () => {
         { note: 'B4', frequency: 493.88, key: 'j' },
         { note: 'C5', frequency: 523.25, key: 'k' }
     ];
+
+    // Define the notes for electric guitar
+    const guitarNotes = [
+        { note: 'A3', frequency: 220.00, key: 'n' },
+        { note: 'B3', frequency: 246.94, key: 'm' },
+        { note: 'B4', frequency: 493.88, key: 'j' },
+        // { note: 'C#6', frequency: 1108.73, key: 'l' },
+        { note: 'C2', frequency: 65.41, key: 'q' },
+        { note: 'C3', frequency: 130.81, key: 'z' },
+        { note: 'D5', frequency: 587.33, key: 'k' },
+        { note: 'E3', frequency: 164.81, key: 'c' },
+        { note: 'E4', frequency: 329.63, key: 'd' },
+        { note: 'F2', frequency: 87.31, key: 'w' },
+        // { note: 'G#5', frequency: 830.61, key: 'u' },
+        { note: 'G3', frequency: 196.00, key: 'b' },
+        { note: 'G4', frequency: 392.00, key: 'g' }
+    ];
+
+    const noteToFileMap = {
+        'A3': 'A2_s2_01.wav',
+        'B3': 'B3_s5_01.wav',
+        'B4': 'B4_s6_01.wav',
+        'C#6': 'C#6_s6_01.wav',
+        'C2': 'C2_s1_01.wav',
+        'C3': 'C3_s2_02.wav',
+        'D5': 'D5_s6_01.wav',
+        'E3': 'E3_s3_01.wav',
+        'E4': 'E4_s6_01.wav',
+        'F2': 'F2_s1_01.wav',
+        'G#5': 'G#5_s6_03.wav',
+        'G3': 'G3_s4_01.wav',
+        'G4': 'G4_s6_01.wav'
+    };
 
     let convolverNode = null;
 
@@ -117,21 +151,69 @@ document.addEventListener('DOMContentLoaded', () => {
         return curve;
     }
 
+    function playNoteSample(note) {
+        const fileName = noteToFileMap[note];
+        if (!fileName) {
+            console.error(`No sample file found for note: ${note}`);
+            return;
+        }
+
+        const url = `assets/guitar/${fileName}`;
+        console.log(`Loading sample from URL: ${url}`);
+        const request = new XMLHttpRequest();
+        request.open('GET', url, true);
+        request.responseType = 'arraybuffer';
+
+        request.onload = () => {
+            console.log(`Loaded sample: ${url}`);
+            audioContext.decodeAudioData(request.response, (buffer) => {
+                console.log(`Decoded sample: ${note}`);
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                let currentNode = source;
+
+                currentNode = applyEffects(currentNode);
+
+                currentNode.connect(audioContext.destination);
+                source.start(0);
+            }, (error) => console.error('Error decoding audio data:', error));
+        };
+
+        request.onerror = () => {
+            console.error(`Failed to load sample: ${url}`);
+        };
+
+        request.send();
+    }
+
     function playNote(frequency, type) {
-        const oscillator = createOscillator(frequency, type);
-        const gainNode = createGainNode();
-        let currentNode = oscillator;
+        if (type === 'electric_guitar') {
+            const noteName = frequencyToNoteName(frequency, guitarNotes);
+            console.log(`Playing note: ${noteName} (${frequency} Hz)`);
+            playNoteSample(noteName);
+        } else {
+            const oscillator = createOscillator(frequency, type);
+            const gainNode = createGainNode();
+            let currentNode = oscillator;
 
-        currentNode = applyEffects(currentNode);
+            currentNode = applyEffects(currentNode);
 
-        currentNode.connect(gainNode).connect(audioContext.destination);
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 1); // Play note for 1 second
+            currentNode.connect(gainNode).connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 1); // Play note for 1 second
+        }
+    }
+
+    function frequencyToNoteName(frequency, notesArray) {
+        const note = notesArray.find(n => n.frequency === frequency);
+        return note ? note.note : '';
     }
 
     function createKeyboard() {
         const keyboard = document.getElementById('keyboard');
-        notes.forEach(note => {
+        const currentNotes = selectedInstrument === 'electric_guitar' ? guitarNotes : oscillatorNotes;
+        keyboard.innerHTML = ''; // Clear existing keys
+        currentNotes.forEach(note => {
             const button = document.createElement('button');
             button.textContent = note.note;
             button.dataset.frequency = note.frequency;
@@ -152,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedInstrument = button.getAttribute('data-type');
             button.classList.add('active');
             console.log('Selected instrument:', selectedInstrument);
+            createKeyboard(); // Recreate the keyboard with the appropriate notes
         });
     });
 
@@ -167,7 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event listener for keyboard keys
     document.addEventListener('keydown', (event) => {
-        const note = notes.find(n => n.key === event.key);
+        const currentNotes = selectedInstrument === 'electric_guitar' ? guitarNotes : oscillatorNotes;
+        const note = currentNotes.find(n => n.key === event.key);
         if (note) {
             playNote(note.frequency, selectedInstrument);
             const button = document.querySelector(`button[data-key="${event.key}"]`);
@@ -178,12 +262,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    createKeyboard();
+    createKeyboard(); // Initial creation of the keyboard
 
     saveButton.addEventListener('click', () => {
         alert('Save functionality to be implemented');
     });
 });
+
+
 
 
 
