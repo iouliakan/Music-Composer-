@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const destination = audioContext.createMediaStreamDestination();
 
     let selectedInstrument = 'sine';
     const activeEffects = {
@@ -12,8 +13,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const instrumentButtons = document.querySelectorAll('.instrument');
     const effectButtons = document.querySelectorAll('.effect');
     const saveButton = document.getElementById('save');
+    const startRecordingButton = document.getElementById('startRecording');
+    const stopRecordingButton = document.getElementById('stopRecording');
 
-    // Define the notes for oscillator instruments
+    let mediaRecorder;
+    let recordedChunks = [];
+
     const oscillatorNotes = [
         { note: 'C3', frequency: 130.81, key: 'z' },
         { note: 'D3', frequency: 146.83, key: 'x' },
@@ -32,19 +37,16 @@ document.addEventListener('DOMContentLoaded', () => {
         { note: 'C5', frequency: 523.25, key: 'k' }
     ];
 
-    // Define the notes for electric guitar
     const guitarNotes = [
         { note: 'A3', frequency: 220.00, key: 'n' },
         { note: 'B3', frequency: 246.94, key: 'm' },
         { note: 'B4', frequency: 493.88, key: 'j' },
-        // { note: 'C#6', frequency: 1108.73, key: 'l' },
         { note: 'C2', frequency: 65.41, key: 'q' },
         { note: 'C3', frequency: 130.81, key: 'z' },
         { note: 'D5', frequency: 587.33, key: 'k' },
         { note: 'E3', frequency: 164.81, key: 'c' },
         { note: 'E4', frequency: 329.63, key: 'd' },
         { note: 'F2', frequency: 87.31, key: 'w' },
-        // { note: 'G#5', frequency: 830.61, key: 'u' },
         { note: 'G3', frequency: 196.00, key: 'b' },
         { note: 'G4', frequency: 392.00, key: 'g' }
     ];
@@ -67,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let convolverNode = null;
 
-    // Function to load impulse response
     function loadImpulseResponse(url) {
         fetch(url)
             .then(response => response.arrayBuffer())
@@ -80,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => console.error('Error loading impulse response:', error));
     }
 
-    // Load a default impulse response for reverb
     loadImpulseResponse('assets/724538__djericmark__00.wav');
 
     function createOscillator(frequency, type) {
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeEffects.delay) {
             console.log('Applying delay');
             const delayNode = audioContext.createDelay();
-            delayNode.delayTime.setValueAtTime(0.5, audioContext.currentTime); // 0.5 seconds delay
+            delayNode.delayTime.setValueAtTime(0.5, audioContext.currentTime);
             currentNode.connect(delayNode);
             currentNode = delayNode;
         }
@@ -126,9 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const chorusDelay = audioContext.createDelay();
             const chorusOscillator = audioContext.createOscillator();
 
-            chorusOscillator.frequency.value = 1.5; // Vibrato frequency
+            chorusOscillator.frequency.value = 1.5;
             chorusOscillator.connect(chorusDelay.delayTime);
-            chorusDelay.delayTime.value = 0.005; // Base delay time
+            chorusDelay.delayTime.value = 0.005;
 
             currentNode.connect(chorusDelay).connect(chorusGain);
             currentNode = chorusGain;
@@ -198,9 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             currentNode = applyEffects(currentNode);
 
-            currentNode.connect(gainNode).connect(audioContext.destination);
+            currentNode.connect(gainNode).connect(destination);
+            currentNode.connect(audioContext.destination);
             oscillator.start();
-            oscillator.stop(audioContext.currentTime + 1); // Play note for 1 second
+            oscillator.stop(audioContext.currentTime + 1);
         }
     }
 
@@ -212,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function createKeyboard() {
         const keyboard = document.getElementById('keyboard');
         const currentNotes = selectedInstrument === 'electric_guitar' ? guitarNotes : oscillatorNotes;
-        keyboard.innerHTML = ''; // Clear existing keys
+        keyboard.innerHTML = '';
         currentNotes.forEach(note => {
             const button = document.createElement('button');
             button.textContent = note.note;
@@ -227,18 +228,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event listeners for instrument buttons
     instrumentButtons.forEach(button => {
         button.addEventListener('click', () => {
             instrumentButtons.forEach(btn => btn.classList.remove('active'));
             selectedInstrument = button.getAttribute('data-type');
             button.classList.add('active');
             console.log('Selected instrument:', selectedInstrument);
-            createKeyboard(); // Recreate the keyboard with the appropriate notes
+            createKeyboard();
         });
     });
 
-    // Event listeners for effect buttons
     effectButtons.forEach(button => {
         button.addEventListener('click', () => {
             const effectId = button.id;
@@ -248,7 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Event listener for keyboard keys
     document.addEventListener('keydown', (event) => {
         const currentNotes = selectedInstrument === 'electric_guitar' ? guitarNotes : oscillatorNotes;
         const note = currentNotes.find(n => n.key === event.key);
@@ -262,12 +260,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    createKeyboard(); // Initial creation of the keyboard
+    createKeyboard();
 
-    saveButton.addEventListener('click', () => {
-        alert('Save functionality to be implemented');
+    startRecordingButton.addEventListener('click', () => {
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(destination.stream);
+
+        mediaRecorder.ondataavailable = event => {
+            if (event.data.size > 0) {
+                recordedChunks.push(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            document.body.appendChild(a);
+            a.style = 'display: none';
+            a.href = url;
+            a.download = 'composition.wav';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        };
+
+        mediaRecorder.start();
+        console.log('Recording started');
+    });
+
+    stopRecordingButton.addEventListener('click', () => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            console.log('Recording stopped');
+        }
     });
 });
+
+
+
 
 
 
