@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Composer</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://kit.fontawesome.com/96b895edc6.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <div id="composer">
@@ -30,9 +31,15 @@
             <div id="keyboard">
                 <!-- Buttons for notes will go here -->
             </div>
-            <button id="startRecording">Start Recording</button>
-           <button id="stopRecording">Stop Recording</button>
-            <button id="save">Save Composition</button>
+
+
+         <div class="button-group"> 
+           <button id="startRecording"  class="styled-button"><i class="fa-solid fa-circle-play" style="color: #ff0000;"></i> Start Recording</button>
+           <button id="stopRecording"  class="styled-button"><i class="fa-solid fa-stop" style="color: #ff0000;"></i> Stop Recording</button>
+
+        </div>
+
+            <button id="save"><i class="fa-solid fa-floppy-disk" style="color: #000000;"></i>  Save Composition</button>
         </div>
     </div>
     <script src="script.js"></script>

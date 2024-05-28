@@ -95,3 +95,28 @@ button#save:hover {
 }
 
 
+button.styled-button {
+    display: block;
+    margin: 20px auto 0; /* Adjusted margin */
+    padding: 10px 20px;
+    background: #00ccff; 
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px; /* Increased font size */
+}
+
+button.styled-button:hover {
+    background: #00a3cc; /* Slightly darker shade for hover */
+}
+
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px; /* Space between the buttons */
+}
+
+.button-group button.styled-button {
+    margin: 0; /* Override the block margin to align them horizontally */
+}

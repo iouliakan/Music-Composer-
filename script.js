@@ -175,7 +175,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentNode = applyEffects(currentNode);
 
                 currentNode.connect(audioContext.destination);
+                currentNode.connect(destination); // Connect to the recording destination
                 source.start(0);
+                source.stop(audioContext.currentTime + 1); // Ensure the note stops after 1 second
             }, (error) => console.error('Error decoding audio data:', error));
         };
 
@@ -201,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentNode.connect(gainNode).connect(destination);
             currentNode.connect(audioContext.destination);
             oscillator.start();
-            oscillator.stop(audioContext.currentTime + 1);
+            oscillator.stop(audioContext.currentTime + 1); // Ensure the note stops after 1 second
         }
     }
 
@@ -273,15 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: 'audio/wav' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            document.body.appendChild(a);
-            a.style = 'display: none';
-            a.href = url;
-            a.download = 'composition.wav';
-            a.click();
-            window.URL.revokeObjectURL(url);
+            console.log('Recording stopped');
         };
 
         mediaRecorder.start();
@@ -291,7 +285,22 @@ document.addEventListener('DOMContentLoaded', () => {
     stopRecordingButton.addEventListener('click', () => {
         if (mediaRecorder && mediaRecorder.state === 'recording') {
             mediaRecorder.stop();
-            console.log('Recording stopped');
+        }
+    });
+
+    saveButton.addEventListener('click', () => {
+        if (recordedChunks.length > 0) {
+            const blob = new Blob(recordedChunks, { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            document.body.appendChild(a);
+            a.style = 'display: none';
+            a.href = url;
+            a.download = 'composition.wav';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } else {
+            alert('No recording available to save.');
         }
     });
 });
