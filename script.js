@@ -51,6 +51,24 @@ document.addEventListener('DOMContentLoaded', () => {
         { note: 'G4', frequency: 392.00, key: 'g' }
     ];
 
+    const pianoNotes = [
+        { note: 'A0', frequency: 27.50, key: 'z' },
+        { note: 'A1', frequency: 55.00, key: 'x' },
+        { note: 'A2', frequency: 110.00, key: 'c' },
+        { note: 'A3', frequency: 220.00, key: 'v' },
+        { note: 'A4', frequency: 440.00, key: 'b' },
+        { note: 'A5', frequency: 880.00, key: 'n' },
+        { note: 'A6', frequency: 1760.00, key: 'm' },
+        { note: 'A7', frequency: 3520.00, key: ',' },
+        { note: 'C1', frequency: 32.70, key: 'a' },
+        { note: 'C2', frequency: 65.41, key: 's' },
+        { note: 'C3', frequency: 130.81, key: 'd' },
+        { note: 'C4', frequency: 261.63, key: 'f' },
+        { note: 'C5', frequency: 523.25, key: 'g' },
+        // { note: 'D3', frequency: 164.81, key: 'h' },
+        // { note: 'D4', frequency: 329.63, key: 'j' }
+    ];
+
     const noteToFileMap = {
         'A3': 'A2_s2_01.wav',
         'B3': 'B3_s5_01.wav',
@@ -65,6 +83,24 @@ document.addEventListener('DOMContentLoaded', () => {
         'G#5': 'G#5_s6_03.wav',
         'G3': 'G3_s4_01.wav',
         'G4': 'G4_s6_01.wav'
+    };
+
+    const pianoNoteToFileMap = {
+        'A0': 'A0vL.wav',
+        'A1': 'A1vL.wav',
+        'A2': 'A2vL.wav',
+        'A3': 'A3vL.wav',
+        'A4': 'A4vL.wav',
+        'A5': 'A5vL.wav',
+        'A6': 'A6vL.wav',
+        'A7': 'A7vL.wav',
+        'C1': 'C1vL.wav',
+        'C2': 'C2vL.wav',
+        'C3': 'C3vL.wav',
+        'C4': 'C4vL.wav',
+        'C5': 'C5vL.wav',
+        // 'D3': 'D#3vL.wav',
+        // 'D4': 'D#4vL.wav'
     };
 
     let convolverNode = null;
@@ -96,21 +132,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function applyEffects(node) {
         let currentNode = node;
-
+    
         if (activeEffects.reverb && convolverNode) {
             console.log('Applying reverb');
             currentNode.connect(convolverNode);
             currentNode = convolverNode;
         }
-
+    
         if (activeEffects.delay) {
             console.log('Applying delay');
             const delayNode = audioContext.createDelay();
+            const feedbackGainNode = audioContext.createGain();
+            const mixGainNode = audioContext.createGain();
+    
+            // Ρυθμίσεις
             delayNode.delayTime.setValueAtTime(0.5, audioContext.currentTime);
+            feedbackGainNode.gain.value = 0.5; // 50% feedback
+            mixGainNode.gain.value = 0.5; // 50% mix
+    
+            // Σύνδεση
             currentNode.connect(delayNode);
-            currentNode = delayNode;
+            delayNode.connect(feedbackGainNode);
+            feedbackGainNode.connect(delayNode); // Feedback loop
+            feedbackGainNode.connect(audioContext.destination); // Output
+    
+            // Παράλληλη σύνδεση για mix
+            currentNode.connect(mixGainNode);
+            mixGainNode.connect(audioContext.destination);
+    
+            currentNode = mixGainNode; // Το mixGainNode γίνεται ο τρέχων κόμβος
         }
-
+    
         if (activeEffects.distortion) {
             console.log('Applying distortion');
             const distortionNode = audioContext.createWaveShaper();
@@ -119,25 +171,26 @@ document.addEventListener('DOMContentLoaded', () => {
             currentNode.connect(distortionNode);
             currentNode = distortionNode;
         }
-
+    
         if (activeEffects.chorus) {
             console.log('Applying chorus');
             const chorusGain = audioContext.createGain();
             const chorusDelay = audioContext.createDelay();
             const chorusOscillator = audioContext.createOscillator();
-
+    
             chorusOscillator.frequency.value = 1.5;
             chorusOscillator.connect(chorusDelay.delayTime);
             chorusDelay.delayTime.value = 0.005;
-
+    
             currentNode.connect(chorusDelay).connect(chorusGain);
             currentNode = chorusGain;
-
+    
             chorusOscillator.start();
         }
-
+    
         return currentNode;
     }
+    
 
     function makeDistortionCurve(amount) {
         const k = typeof amount === 'number' ? amount : 50;
@@ -151,19 +204,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return curve;
     }
 
-    function playNoteSample(note) {
-        const fileName = noteToFileMap[note];
+    function playNoteSample(note, type) {
+        let fileName;
+        if (type === 'piano') {
+            fileName = pianoNoteToFileMap[note];
+            filePath = `assets/grandpiano/UprightPianoKW-SFZ-20220221 (1)/UprightPianoKW-SFZ-20220221/samples/${fileName}`;
+        } else if (type === 'electric_guitar') {
+            fileName = noteToFileMap[note];
+            filePath = `assets/guitar/${fileName}`;
+        }
+    
         if (!fileName) {
             console.error(`No sample file found for note: ${note}`);
             return;
         }
-
-        const url = `assets/guitar/${fileName}`;
+    
+        const url = filePath;
         console.log(`Loading sample from URL: ${url}`);
         const request = new XMLHttpRequest();
         request.open('GET', url, true);
         request.responseType = 'arraybuffer';
-
+    
         request.onload = () => {
             console.log(`Loaded sample: ${url}`);
             audioContext.decodeAudioData(request.response, (buffer) => {
@@ -171,41 +232,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 const source = audioContext.createBufferSource();
                 source.buffer = buffer;
                 let currentNode = source;
-
+    
                 currentNode = applyEffects(currentNode);
-
+    
                 currentNode.connect(audioContext.destination);
                 currentNode.connect(destination); // Connect to the recording destination
                 source.start(0);
                 source.stop(audioContext.currentTime + 1); // Ensure the note stops after 1 second
             }, (error) => console.error('Error decoding audio data:', error));
         };
-
+    
         request.onerror = () => {
             console.error(`Failed to load sample: ${url}`);
         };
-
+    
         request.send();
     }
+    
+    
 
     function playNote(frequency, type) {
-        if (type === 'electric_guitar') {
-            const noteName = frequencyToNoteName(frequency, guitarNotes);
+        if (type === 'electric_guitar' || type === 'piano') {
+            const notesArray = type === 'electric_guitar' ? guitarNotes : pianoNotes;
+            const noteName = frequencyToNoteName(frequency, notesArray);
             console.log(`Playing note: ${noteName} (${frequency} Hz)`);
-            playNoteSample(noteName);
+            playNoteSample(noteName, type);
         } else {
             const oscillator = createOscillator(frequency, type);
             const gainNode = createGainNode();
             let currentNode = oscillator;
-
+    
             currentNode = applyEffects(currentNode);
-
+    
             currentNode.connect(gainNode).connect(destination);
             currentNode.connect(audioContext.destination);
             oscillator.start();
             oscillator.stop(audioContext.currentTime + 1); // Ensure the note stops after 1 second
         }
     }
+    
 
     function frequencyToNoteName(frequency, notesArray) {
         const note = notesArray.find(n => n.frequency === frequency);
@@ -214,7 +279,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createKeyboard() {
         const keyboard = document.getElementById('keyboard');
-        const currentNotes = selectedInstrument === 'electric_guitar' ? guitarNotes : oscillatorNotes;
+        let currentNotes;
+        switch (selectedInstrument) {
+            case 'electric_guitar':
+                currentNotes = guitarNotes;
+                break;
+            case 'piano':
+                currentNotes = pianoNotes;
+                break;
+            default:
+                currentNotes = oscillatorNotes;
+                break;
+        }
         keyboard.innerHTML = '';
         currentNotes.forEach(note => {
             const button = document.createElement('button');
@@ -229,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             keyboard.appendChild(button);
         });
     }
+    
 
     instrumentButtons.forEach(button => {
         button.addEventListener('click', () => {
