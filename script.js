@@ -1,8 +1,13 @@
+// Εκτέλεση του κώδικα μόλις φορτωθεί το περιεχόμενο του εγγράφου
 document.addEventListener('DOMContentLoaded', () => {
+     // Δημιουργία του audio context
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    // Δημιουργία του προορισμού για καταγραφή ήχου
     const destination = audioContext.createMediaStreamDestination();
 
+      // Επιλογή αρχικού οργάνου
     let selectedInstrument = 'sine';
+     // Αρχικοποίηση των ενεργών εφέ
     const activeEffects = {
         reverb: false,
         delay: false,
@@ -10,15 +15,18 @@ document.addEventListener('DOMContentLoaded', () => {
         chorus: false
     };
 
+     // Επιλογή των κουμπιών των οργάνων και των εφέ από το DOM
     const instrumentButtons = document.querySelectorAll('.instrument');
     const effectButtons = document.querySelectorAll('.effect');
     const saveButton = document.getElementById('save');
     const startRecordingButton = document.getElementById('startRecording');
     const stopRecordingButton = document.getElementById('stopRecording');
 
+     // Μεταβλητές για την καταγραφή ήχου
     let mediaRecorder;
     let recordedChunks = [];
 
+     // Πίνακες με τις νότες για το κάθε όργανο
     const oscillatorNotes = [
         { note: 'C3', frequency: 130.81, key: 'z' },
         { note: 'D3', frequency: 146.83, key: 'x' },
@@ -69,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // { note: 'D4', frequency: 329.63, key: 'j' }
     ];
 
+    // Χαρτογράφηση των νοτών σε αρχεία ήχου για κάθε όργανο
     const noteToFileMap = {
         'A3': 'A2_s2_01.wav',
         'B3': 'B3_s5_01.wav',
@@ -103,8 +112,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 'D4': 'D#4vL.wav'
     };
 
+      // Αρχικοποίηση του convolver node για την αντήχηση
     let convolverNode = null;
 
+     // Φόρτωση του impulse response για την αντήχηση
     function loadImpulseResponse(url) {
         fetch(url)
             .then(response => response.arrayBuffer())
@@ -119,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadImpulseResponse('assets/724538__djericmark__00.wav');
 
+     // Δημιουργία ενός oscillator με συγκεκριμένη συχνότητα και τύπο κυματομορφής
     function createOscillator(frequency, type) {
         const oscillator = audioContext.createOscillator();
         oscillator.type = type;
@@ -126,10 +138,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return oscillator;
     }
 
+     // Δημιουργία ενός gain node
     function createGainNode() {
         return audioContext.createGain();
     }
 
+
+    // Εφαρμογή των εφέ στον κόμβο ήχου
     function applyEffects(node) {
         let currentNode = node;
     
@@ -191,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return currentNode;
     }
     
-
+// Δημιουργία της καμπύλης παραμόρφωσης
     function makeDistortionCurve(amount) {
         const k = typeof amount === 'number' ? amount : 50;
         const n_samples = 44100;
@@ -204,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return curve;
     }
 
+    // Αναπαραγωγή δείγματος νότας
     function playNoteSample(note, type) {
         let fileName;
         if (type === 'piano') {
@@ -250,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     
-
+// Αναπαραγωγή νότας
     function playNote(frequency, type) {
         if (type === 'electric_guitar' || type === 'piano') {
             const notesArray = type === 'electric_guitar' ? guitarNotes : pianoNotes;
@@ -271,12 +287,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Μετατροπή συχνότητας σε όνομα νότας
 
     function frequencyToNoteName(frequency, notesArray) {
         const note = notesArray.find(n => n.frequency === frequency);
         return note ? note.note : '';
     }
 
+    // Δημιουργία πληκτρολογίου
     function createKeyboard() {
         const keyboard = document.getElementById('keyboard');
         let currentNotes;
@@ -306,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-
+ // Προσθήκη συμβάντος click στα κουμπιά των οργάνων
     instrumentButtons.forEach(button => {
         button.addEventListener('click', () => {
             instrumentButtons.forEach(btn => btn.classList.remove('active'));
@@ -316,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
             createKeyboard();
         });
     });
-
+// Προσθήκη συμβάντος click στα κουμπιά των εφέ
     effectButtons.forEach(button => {
         button.addEventListener('click', () => {
             const effectId = button.id;
@@ -325,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
             button.classList.toggle('active');
         });
     });
-
+// Προσθήκη συμβάντος keydown για την αναπαραγωγή νότας με το πληκτρολόγιο
     document.addEventListener('keydown', (event) => {
         const currentNotes = selectedInstrument === 'electric_guitar' ? guitarNotes : oscillatorNotes;
         const note = currentNotes.find(n => n.key === event.key);
@@ -339,8 +357,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Δημιουργία αρχικού πληκτρολογίου
     createKeyboard();
 
+    // Έναρξη καταγραφής ήχου
     startRecordingButton.addEventListener('click', () => {
         recordedChunks = [];
         mediaRecorder = new MediaRecorder(destination.stream);
@@ -358,12 +378,14 @@ document.addEventListener('DOMContentLoaded', () => {
         mediaRecorder.start();
         console.log('Recording started');
     });
-
+ // Σταμάτημα καταγραφής ήχου
     stopRecordingButton.addEventListener('click', () => {
         if (mediaRecorder && mediaRecorder.state === 'recording') {
             mediaRecorder.stop();
         }
     });
+
+    // Αποθήκευση του καταγεγραμμένου ήχου
 
     saveButton.addEventListener('click', () => {
         if (recordedChunks.length > 0) {
