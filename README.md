@@ -28,8 +28,6 @@ Welcome to the Music Composer project! This web application allows users to comp
 - HTML5
 - CSS
 
-## Demo
-
 
 
 ## Known Issues
