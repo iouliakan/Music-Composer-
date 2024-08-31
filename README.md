@@ -36,6 +36,4 @@ Welcome to the Music Composer project! This web application allows users to comp
 - Compatibility with older browsers may be limited due to the advanced features of the Web Audio API.
 
 
-## License
 
-This project is licensed under the [MIT License](LICENSE).
